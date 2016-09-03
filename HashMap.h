@@ -54,7 +54,7 @@ bool HashMap<T>::set(const std::string key, T value) {
   if (key == "")
     return false;
 
-  std::list<std::pair<std::string, T> > listAtKey;
+  std::list<std::pair<std::string, T> >* listAtKey;
   //Function Call----------------------------------
   int insertIndex = hash(key);
 
@@ -66,17 +66,21 @@ bool HashMap<T>::set(const std::string key, T value) {
   do {
     //increment position in map array
     insertIndex = (insertIndex + increment * increment) % mapSize;
-    listAtKey = map[insertIndex];
+    listAtKey = &map[insertIndex];
 
-    //check if current list contains key-value pair with the same key and a not null object. Return if so.
-    for (typename std::list<std::pair<std::string, T> >::const_iterator itPair = listAtKey.begin(); itPair != listAtKey.end(); ++itPair) {
-      if (itPair->first == key && itPair->second != T())
-        return false;
+    //check all items in current list
+    for (typename std::list<std::pair<std::string, T> >::iterator itPair = listAtKey->begin(); itPair != listAtKey->end(); ++itPair) {
+      if (itPair->first == key) {
+        if (itPair->second != T())
+          return false;   //return false if a key, value pair already exists and is not empty
+        itPair->second = value;
+        return true;      //if the value is empty, replace it with the new value and return true
+      }
     }
 
     //store the index of the smallest list to then store the object in that list
     //in case an empty slot cannot be found after 5 open addressing attempts
-    int listSize = listAtKey.size();
+    int listSize = listAtKey->size();
     if (listSize <= smallestListSize) {
       smallestListSize = listSize;
       smallestListIndex = insertIndex;
@@ -84,16 +88,16 @@ bool HashMap<T>::set(const std::string key, T value) {
 
     increment++;
     rehashAttempts++;
-  } while (listAtKey.size() > 0 && rehashAttempts < 5);
+  } while (listAtKey->size() > 0 && rehashAttempts < 5);
 
   //only increment the number of items in map if the object is stored at an empty position
   bool incrementNumberOfItems = true;
-  if (listAtKey.size() > 0) {
+  if (listAtKey->size() > 0) {
     incrementNumberOfItems = false;
     insertIndex = smallestListIndex;
   }
 
-  map[insertIndex].push_back(std::pair<std::string, T>(key, value));
+  listAtKey->push_back(std::pair<std::string, T>(key, value));
   if (incrementNumberOfItems)
     itemsInMap++;
   return true;
